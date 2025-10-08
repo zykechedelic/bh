@@ -29,7 +29,7 @@
   <div class="grid" id="boss-grid"></div>
 
   <!-- 🔔 Alarm Sound -->
-  <audio id="alarm-sound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
+  <audio id="alarm-sound" src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" preload="auto"></audio>
 
   <script>
     const bosses = [
@@ -133,7 +133,7 @@
           else if(remaining<=10*60*1000) timerEl.classList.add('alert');
 
           // 🔔 Trigger alarm when remaining <= 2 mins (120000 ms)
-          if(remaining <= 120000 && !alarmTriggered.has(b.name)){
+          if(remaining <= 90000 && !alarmTriggered.has(b.name)){
             alarmTriggered.add(b.name);
             alarmSound.play().catch(()=>{ /* ignore autoplay errors */ });
           }
