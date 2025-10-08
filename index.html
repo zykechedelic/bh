@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SlashPH Lordnine Boss Timers</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Roboto+Mono:wght@600&display=swap" rel="stylesheet">
+  <style>
+    body { margin:0; background:linear-gradient(to right,#0f0f0f,#1c1c1c); font-family:'Roboto Mono',monospace; color:#e4e4e4; }
+    header { padding:20px; text-align:center; background:#111; font-family:'Cinzel',serif; font-size:1.6rem; color:#f5f5f5; border-bottom:2px solid #333; }
+    #next-banner { text-align:center; font-size:1.3rem; margin:15px; color:#00ff99; font-weight:bold; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:15px; padding:20px; }
+    .boss { position:relative; overflow:hidden; border-radius:15px; padding:15px; box-shadow:0 4px 15px rgba(0,0,0,0.6); display:flex; flex-direction:column; justify-content:flex-start; background-color:#1f1f1f; background-size:contain; background-repeat:no-repeat; background-position:right center; min-height:150px; transition:.3s; }
+    .boss::before { content:""; position:absolute; top:0;left:0;right:0;bottom:0; background:linear-gradient(to right,rgba(31,31,31,0.95) 60%,rgba(31,31,31,0.6)); z-index:1; }
+    .boss-content { position:relative; z-index:2; }
+    .boss.highlight { border:2px solid #00ffcc; background-color:#262626; }
+    .boss h2 { font-family:'Cinzel',serif; font-size:1.2rem; margin-bottom:10px; color:#ffcc00; }
+    .timer { font-size:1.4rem; font-weight:bold; margin-bottom:8px; color:#00ffcc; }
+    .timer.spawned{color:#00ff00;}
+    .timer.alert{animation:flash 1s infinite;font-weight:bold;}
+    .next-time{font-size:.9rem;color:#aaa;}
+    @keyframes flash{0%{color:#ff4444;}50%{color:#fff;}100%{color:#ff4444;}}
+    .interval-badge{position:absolute;top:8px;right:12px;background:rgba(255,255,255,0.2);padding:2px 8px;border-radius:8px;font-size:.9rem;font-weight:bold;color:#ddd;z-index:3;}
+  </style>
+</head>
+<body>
+  <header>Lordnine Boss Timers</header>
+  <div id="next-banner">Next Boss: Loading...</div>
+  <div class="grid" id="boss-grid"></div>
+
+  <script>
+    const bosses = [
+      { name:'Undomiel', intervals:[24], lastKilled:'2025-09-26 05:08 PM' },
+      { name:'Lady Daliah', intervals:[18], lastKilled:'2025-10-02 08:20 AM' },
+      { name:'Venatus', intervals:[10], lastKilled:'2025-10-08 11:20 AM' },
+      { name:'Viorent', intervals:[10], lastKilled:'2025-10-08 11:24 AM' },
+      { name:'Ego', intervals:[21], lastKilled:'2025-10-04 09:10 AM' },
+      { name:'Araneo', intervals:[24], lastKilled:'2025-09-26 04:59 PM' },
+      { name:'Livera', intervals:[24], lastKilled:'2025-09-26 04:53 PM' },
+      { name:'General Aquleus', intervals:[29], lastKilled:'2025-09-29 07:30 PM' },
+      { name:'Amentis', intervals:[29], lastKilled:'2025-09-23 06:22 PM' },
+      { name:'Baron Braudmore', intervals:[32], lastKilled:'2025-09-21 05:15 PM' },
+      { name:'Wannitas', intervals:[48], lastKilled:'2025-09-21 05:24 PM' },
+      { name:'Metus', intervals:[48], lastKilled:'2025-09-21 05:31 PM' },
+      { name:'Duplican', intervals:[48], lastKilled:'2025-09-21 05:36 PM' },
+      { name:'Shuliar', intervals:[35], lastKilled:'2025-09-19 04:48 AM' },
+      { name:'Ringor', intervals:[10], lastKilled:'2025-09-20 05:15 PM' },
+      { name:'Gareth', intervals:[32], lastKilled:'' },
+      { name:'Titore', intervals:[37], lastKilled:'2025-09-10 12:34 PM' },
+      { name:'Larba', intervals:[35], lastKilled:'2025-09-19 04:51 AM' },
+      { name:'Catena', intervals:[35], lastKilled:'2025-09-21 10:50 AM' },
+      { name:'Thymele', schedule:[{day:1,hour:19,minute:0},{day:3,hour:11,minute:30}] },
+      { name:'Clemantis', schedule:[{day:1,hour:11,minute:30},{day:4,hour:19,minute:0}] },
+      { name:'Saphirus', schedule:[{day:0,hour:17,minute:0},{day:2,hour:11,minute:30}] },
+      { name:'Neutro', schedule:[{day:2,hour:19,minute:0},{day:4,hour:11,minute:30}] },
+      { name:'Roderick', schedule:[{day:5,hour:19,minute:0}] },
+      { name:'Milavy', schedule:[{day:6,hour:15,minute:0}] },
+      { name:'Auraq', schedule:[{day:0,hour:21,minute:0},{day:3,hour:21,minute:0}] }
+    ];
+
+    function nameToId(name){ return name.toLowerCase().replace(/\s+/g,'-'); }
+    function formatTime(ms){ if(ms===null) return "NO INFO"; if(ms<=0) return "SPAWNED!"; let s=Math.floor(ms/1000); const d=Math.floor(s/86400); s%=86400; const h=Math.floor(s/3600); s%=3600; const m=Math.floor(s/60); s%=60; return (d>0?d+"d ":"")+(h>0?h+"h ":"")+(m>0?m+"m ":"")+s+"s"; }
+    function formatDateTime(dt){ if(!dt) return 'NO INFO'; const opts={weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}; return dt.toLocaleString('en-US',opts)+" (PH)"; }
+
+    function computeNextSpawn(boss){
+      const now=new Date();
+      if(boss.schedule){
+        let nextSpawns=boss.schedule.map(s=>{ 
+          let next=new Date(now);
+          next.setHours(s.hour,s.minute,0,0);
+          const diff=(s.day-next.getDay()+7)%7;
+          if(diff===0 && next<now) next.setDate(next.getDate()+7);
+          else next.setDate(next.getDate()+diff);
+          return next;
+        });
+        nextSpawns.sort((a,b)=>a-b);
+        return nextSpawns[0];
+      }
+      if(!boss.lastKilled){ return null; }
+      let last=new Date(boss.lastKilled);
+      if(isNaN(last)) return null;
+      let nextSpawns=boss.intervals.map(h=>{
+        let next=new Date(last.getTime()+h*3600*1000);
+        while(next<now) next=new Date(next.getTime()+h*3600*1000);
+        return next;
+      });
+      nextSpawns.sort((a,b)=>a-b);
+      return nextSpawns[0];
+    }
+
+    function updateTimers(){
+      const now=new Date();
+      bosses.forEach(b=>{ b.nextSpawn=computeNextSpawn(b); });
+
+      // sort bosses by soonest spawn (NO INFO sa dulo)
+      const sorted=[...bosses].sort((a,b)=>{
+        if(a.nextSpawn===null) return 1;
+        if(b.nextSpawn===null) return -1;
+        return a.nextSpawn-b.nextSpawn;
+      });
+
+      const soonestBoss=sorted.find(b=>b.nextSpawn!==null)||null;
+      const grid=document.getElementById('boss-grid');
+      grid.innerHTML='';
+
+      sorted.forEach(b=>{
+        const id=nameToId(b.name);
+        const remaining=b.nextSpawn?b.nextSpawn-now:null;
+        const hoursLabel=b.intervals?b.intervals.join("/")+"h":"Fixed";
+        const card=document.createElement('div');
+        card.className='boss';
+        card.id=`card-${id}`;
+        card.style.backgroundImage=`url('${id}.png')`;
+        card.innerHTML=`
+          <div class="interval-badge">${hoursLabel}</div>
+          <div class="boss-content">
+            <h2>${b.name}</h2>
+            <div id="timer-${id}" class="timer">${remaining===null?"NO INFO":formatTime(remaining)}</div>
+            <div id="next-${id}" class="next-time">Next: ${formatDateTime(b.nextSpawn)}</div>
+          </div>`;
+        if(b===soonestBoss) card.classList.add('highlight');
+        grid.appendChild(card);
+
+        const timerEl=card.querySelector(`#timer-${id}`);
+        if(remaining!==null){
+          if(remaining<=0) timerEl.classList.add('spawned');
+          else if(remaining<=10*60*1000) timerEl.classList.add('alert');
+        }
+      });
+
+      document.getElementById('next-banner').textContent=
+        soonestBoss?`Next Boss: ${soonestBoss.name} at ${formatDateTime(soonestBoss.nextSpawn)}`:"Next Boss: NO INFO";
+    }
+
+    setInterval(updateTimers,1000);
+    updateTimers();
+  </script>
+</body>
+</html>
