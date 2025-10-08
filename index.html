@@ -28,6 +28,9 @@
   <div id="next-banner">Next Boss: Loading...</div>
   <div class="grid" id="boss-grid"></div>
 
+  <!-- 🔔 Alarm Sound -->
+  <audio id="alarm-sound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
+
   <script>
     const bosses = [
       { name:'Undomiel', intervals:[24], lastKilled:'2025-09-26 05:08 PM' },
@@ -57,6 +60,10 @@
       { name:'Milavy', schedule:[{day:6,hour:15,minute:0}] },
       { name:'Auraq', schedule:[{day:0,hour:21,minute:0},{day:3,hour:21,minute:0}] }
     ];
+
+    // store which bosses already triggered the alarm
+    const alarmTriggered = new Set();
+    const alarmSound = document.getElementById('alarm-sound');
 
     function nameToId(name){ return name.toLowerCase().replace(/\s+/g,'-'); }
     function formatTime(ms){ if(ms===null) return "NO INFO"; if(ms<=0) return "SPAWNED!"; let s=Math.floor(ms/1000); const d=Math.floor(s/86400); s%=86400; const h=Math.floor(s/3600); s%=3600; const m=Math.floor(s/60); s%=60; return (d>0?d+"d ":"")+(h>0?h+"h ":"")+(m>0?m+"m ":"")+s+"s"; }
@@ -92,7 +99,6 @@
       const now=new Date();
       bosses.forEach(b=>{ b.nextSpawn=computeNextSpawn(b); });
 
-      // sort bosses by soonest spawn (NO INFO sa dulo)
       const sorted=[...bosses].sort((a,b)=>{
         if(a.nextSpawn===null) return 1;
         if(b.nextSpawn===null) return -1;
@@ -125,6 +131,12 @@
         if(remaining!==null){
           if(remaining<=0) timerEl.classList.add('spawned');
           else if(remaining<=10*60*1000) timerEl.classList.add('alert');
+
+          // 🔔 Trigger alarm when remaining <= 2 mins (120000 ms)
+          if(remaining <= 120000 && !alarmTriggered.has(b.name)){
+            alarmTriggered.add(b.name);
+            alarmSound.play().catch(()=>{ /* ignore autoplay errors */ });
+          }
         }
       });
 
