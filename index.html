@@ -90,8 +90,8 @@
       let last=new Date(boss.lastKilled);
       if(isNaN(last)) return null;
       let nextSpawns=boss.intervals.map(h=>{
-        let next = new Date(last.getTime() + h * 3600 * 1000 + 30 * 1000);
-        while (next < now) next = new Date(next.getTime() + h * 3600 * 1000);
+        let next=new Date(last.getTime()+h*3600*1000);
+        while(next<now) next=new Date(next.getTime()+h*3600*1000);
         return next;
       });
       nextSpawns.sort((a,b)=>a-b);
