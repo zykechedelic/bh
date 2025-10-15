@@ -135,16 +135,16 @@
           if(remaining<=0) {
             timerEl.classList.add('spawned');
 
-            // ⏱️ Add +2 minutes after spawn for Venatus and Viorent
-            if ((b.name === 'Venatus' || b.name === 'Viorent') && !b.adjusted) {
+            // ⏱️ Add +2 minutes after spawn for Viorent only
+            if (b.name === 'Viorent' && !b.adjusted) {
               b.adjusted = true;
               const last = new Date(b.lastKilled);
               last.setMinutes(last.getMinutes() + 2);
               b.lastKilled = last.toLocaleString('en-US', {hour12:true});
               console.log(`${b.name} adjusted +2 minutes. New lastKilled: ${b.lastKilled}`);
-              // Immediately refresh timers
               setTimeout(updateTimers, 500);
             }
+
           } 
           else if(remaining<=10*60*1000) timerEl.classList.add('alert');
 
